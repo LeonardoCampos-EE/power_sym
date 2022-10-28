@@ -79,8 +79,18 @@ def build_ps():
         q_g_max=0.24,
         bus=bus_k3.name,
     )
+
+    line_1 = sys.create_line(
+        start_bus=bus_k1.name, end_bus=bus_k3.name, r=0.055, x=0.211
+    )
+    line_2 = sys.create_line(
+        start_bus=bus_k1.name, end_bus=bus_k2.name, r=0.006, x=0.048
+    )
+    line_3 = sys.create_line(
+        start_bus=bus_k2.name, end_bus=bus_k3.name, r=0.011, x=0.087
+    )
+
     sys.initialize()
-    
 
     return sys
 
@@ -89,5 +99,7 @@ if __name__ == "__main__":
 
     # t = build_3_bus_system()
     t = build_ps()
-
-    pdb.set_trace()
+    print(t.bus_info)
+    print(t.gen_info)
+    print(t.line_info)
+    print(t.load_info)
