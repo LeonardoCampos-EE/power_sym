@@ -1,7 +1,6 @@
 import numpy as np
 from typing import List, Union
 
-
 class Bus:
     def __init__(
         self,
@@ -18,7 +17,6 @@ class Bus:
 
         Generation -> Power > 0
         Consumption -> Power < 0
-
         """
 
         # Bus name

@@ -12,4 +12,4 @@ def generator_cost_function(
 
 
 
-    
+
