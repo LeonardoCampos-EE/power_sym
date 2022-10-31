@@ -5,9 +5,13 @@ import pdb
 from power_flow.merit_order_dispatch import (
     generator_cost_function,
     incremental_cost_function,
-    equivalent_incremental_cost_function,
+    calculate_a_t,
+    calculate_b_t,
+    calculate_Pg_t,
+    calculate_equivalent_incremental_cost,
     calculate_dispatched_power_from_cost,
     calculate_dispatched_power_from_demand,
+    merit_order_dispatch_algorithm,
 )
 
 # Tests conducted in the 2 generator example system
@@ -40,16 +44,24 @@ def test_incremental_cost_function() -> None:
     return
 
 
-def test_equivalent_incremental_cost_function() -> None:
+def test_calculate_equivalent_incremental_cost() -> None:
 
-    Pg = jnp.array([45.4545, 204.5455])
+    Pg_t = 250.0
+
+    a_t = calculate_a_t(a)
+
+    np.testing.assert_approx_equal(a_t, 0.004363636486232281)
+
+    b_t = calculate_b_t(a, b, a_t)
+
+    np.testing.assert_approx_equal(b_t, 7.2727274894714355)
 
     exact_incremental_cost = 8.3636
 
-    estimated_cost = equivalent_incremental_cost_function(Pg, a, b)
+    estimated_cost = calculate_equivalent_incremental_cost(Pg_t, a_t, b_t)
 
     np.testing.assert_approx_equal(
-        exact_incremental_cost, estimated_cost, significant=1
+        estimated_cost, exact_incremental_cost, significant=1
     )
 
     return
@@ -75,5 +87,22 @@ def test_calculate_dispatched_power_from_demand() -> None:
     estimated_dispatch = np.array(calculate_dispatched_power_from_demand(demand, a, b))
 
     np.testing.assert_allclose(exact_dispatch, estimated_dispatch, rtol=1e-1, atol=1e-1)
+
+    return
+
+
+def test_merit_order_dispatch_algoritm() -> None:
+
+    Pg_max = jnp.array([625.0, 625.0])
+    Pg_min = jnp.array([100.0, 100.0])
+    demand = 250.0
+
+    Pg, lambd = merit_order_dispatch_algorithm(Pg_max, Pg_min, a, b, demand)
+
+    exact_dispatch = np.array([100.0, 150.0])
+    exact_lambd = 7.84
+
+    np.testing.assert_allclose(exact_dispatch, np.array(Pg), rtol=1e-1)
+    np.testing.assert_approx_equal(exact_lambd, lambd, significant=1)
 
     return
