@@ -1,8 +1,32 @@
+from dataclasses import dataclass
+import jax.numpy as jnp
 import pandapower as pp
 
 import warnings
 
 warnings.filterwarnings("ignore")
+
+
+@dataclass
+class SystemArrays:
+
+    bus_v: jnp.DeviceArray
+    bus_theta: jnp.DeviceArray
+    G: jnp.DeviceArray
+    B: jnp.DeviceArray
+
+    load_p: jnp.DeviceArray
+    load_q: jnp.DeviceArray
+
+    thermo_p_g: jnp.DeviceArray
+    thermo_q_g: jnp.DeviceArray
+    thermo_cost: jnp.DeviceArray
+
+    hydro_p_g: jnp.DeviceArray
+    hydro_q_g: jnp.DeviceArray
+
+
+
 
 
 def build_3_bus_system(

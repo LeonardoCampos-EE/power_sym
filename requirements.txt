@@ -2,3 +2,5 @@ pandas
 numpy
 pandapower
 matplotlib
+pytest
+jax

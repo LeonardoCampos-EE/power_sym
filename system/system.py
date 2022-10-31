@@ -1,11 +1,13 @@
 import numpy as np
 import pandas as pd
-from typing import List, Type, Union
+from typing import List, Union
+import jax.numpy as jnp
 
 from .bus import Bus
 from .line import Line
 from .generator import Generator
 from .load import Load
+from .utils import SystemArrays
 
 
 class PowerSystem:
@@ -267,3 +269,18 @@ class PowerSystem:
         susceptance_matrix[starts, endings] = susceptances
 
         return susceptance_matrix
+
+    def get_system_arrays(self) -> SystemArrays:
+
+        return SystemArrays(
+            bus_v=jnp.array(self.bus_info.v.to_numpy(), dtype=jnp.float64),
+            bus_theta=jnp.array(self.bus_info.theta.to_numpy(), dtype=jnp.float64),
+            B=jnp.array(self.B, dtype=jnp.float64),
+            G=jnp.array(self.G, dtype=jnp.float64),
+            load_p=jnp.array(self.load_info.p_c.to_numpy(), dtype=jnp.float64),
+            load_q=jnp.array(self.load_info.q_c.to_numpy(), dtype=jnp.float64),
+            thermo_p_g=jnp.array(self.bus_info.theta.to_numpy(), dtype=jnp.float64),
+            thermo_q_g=jnp.array(self.bus_info.theta.to_numpy(), dtype=jnp.float64),
+            hydro_p_g=jnp.array(self.bus_info.theta.to_numpy(), dtype=jnp.float64),
+            hydro_q_g=jnp.array(self.bus_info.theta.to_numpy(), dtype=jnp.float64),
+        )
