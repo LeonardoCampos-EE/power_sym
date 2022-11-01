@@ -95,12 +95,90 @@ def test_merit_order_dispatch_algoritm() -> None:
 
     Pg_max = jnp.array([625.0, 625.0])
     Pg_min = jnp.array([100.0, 100.0])
+
+    # Case 1
     demand = 250.0
+    exact_dispatch = np.array([100.0, 150.0])
+    exact_lambd = 7.84
 
     Pg, lambd = merit_order_dispatch_algorithm(Pg_max, Pg_min, a, b, demand)
 
-    exact_dispatch = np.array([100.0, 150.0])
-    exact_lambd = 7.84
+    np.testing.assert_allclose(exact_dispatch, np.array(Pg), rtol=1e-1)
+    np.testing.assert_approx_equal(exact_lambd, lambd, significant=1)
+    np.testing.assert_approx_equal(demand, jnp.sum(Pg).item(), significant=1)
+
+    # Case 2
+    demand = 350.0
+    exact_dispatch = np.array([100.0, 250.0])
+    exact_lambd = 8.8
+
+    Pg, lambd = merit_order_dispatch_algorithm(Pg_max, Pg_min, a, b, demand)
+
+    np.testing.assert_allclose(exact_dispatch, np.array(Pg), rtol=1e-1)
+    np.testing.assert_approx_equal(exact_lambd, lambd, significant=1)
+    np.testing.assert_approx_equal(demand, jnp.sum(Pg).item(), significant=1)
+
+    # Case 3
+    demand = 500.0
+    exact_dispatch = np.array([181.82, 318.18])
+    exact_lambd = 9.45
+
+    Pg, lambd = merit_order_dispatch_algorithm(Pg_max, Pg_min, a, b, demand)
+
+    np.testing.assert_allclose(exact_dispatch, np.array(Pg), rtol=1e-1)
+    np.testing.assert_approx_equal(exact_lambd, lambd, significant=1)
+    np.testing.assert_approx_equal(demand, jnp.sum(Pg).item(), significant=1)
+
+    # Case 4
+    demand = 700
+    exact_dispatch = np.array([290.91, 409.09])
+    exact_lambd = 10.33
+
+    Pg, lambd = merit_order_dispatch_algorithm(Pg_max, Pg_min, a, b, demand)
+
+    np.testing.assert_allclose(exact_dispatch, np.array(Pg), rtol=1e-1)
+    np.testing.assert_approx_equal(exact_lambd, lambd, significant=1)
+    np.testing.assert_approx_equal(demand, jnp.sum(Pg).item(), significant=1)
+
+    # Case 5
+    demand = 900.0
+    exact_dispatch = np.array([400.0, 500.0])
+    exact_lambd = 11.2
+
+    Pg, lambd = merit_order_dispatch_algorithm(Pg_max, Pg_min, a, b, demand)
+
+    np.testing.assert_allclose(exact_dispatch, np.array(Pg), rtol=1e-1)
+    np.testing.assert_approx_equal(exact_lambd, lambd, significant=1)
+    np.testing.assert_approx_equal(demand, jnp.sum(Pg).item(), significant=1)
+
+    # Case 6
+    demand = 1100.0
+    exact_dispatch = np.array([509.09, 590.91])
+    exact_lambd = 12.07
+
+    Pg, lambd = merit_order_dispatch_algorithm(Pg_max, Pg_min, a, b, demand)
+
+    np.testing.assert_allclose(exact_dispatch, np.array(Pg), rtol=1e-1)
+    np.testing.assert_approx_equal(exact_lambd, lambd, significant=1)
+    np.testing.assert_approx_equal(demand, jnp.sum(Pg).item(), significant=1)
+
+    # Case 7
+    demand = 1175.0
+    exact_dispatch = np.array([550.0, 625.0])
+    exact_lambd = 12.4
+
+    Pg, lambd = merit_order_dispatch_algorithm(Pg_max, Pg_min, a, b, demand)
+
+    np.testing.assert_allclose(exact_dispatch, np.array(Pg), rtol=1e-1)
+    np.testing.assert_approx_equal(exact_lambd, lambd, significant=1)
+    np.testing.assert_approx_equal(demand, jnp.sum(Pg).item(), significant=1)
+
+    # Case 8
+    demand = 1250.0
+    exact_dispatch = np.array([625.0, 625.0])
+    exact_lambd = 13.0
+
+    Pg, lambd = merit_order_dispatch_algorithm(Pg_max, Pg_min, a, b, demand)
 
     np.testing.assert_allclose(exact_dispatch, np.array(Pg), rtol=1e-1)
     np.testing.assert_approx_equal(exact_lambd, lambd, significant=1)
