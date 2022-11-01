@@ -104,5 +104,6 @@ def test_merit_order_dispatch_algoritm() -> None:
 
     np.testing.assert_allclose(exact_dispatch, np.array(Pg), rtol=1e-1)
     np.testing.assert_approx_equal(exact_lambd, lambd, significant=1)
+    np.testing.assert_approx_equal(demand, jnp.sum(Pg).item(), significant=1)
 
     return
