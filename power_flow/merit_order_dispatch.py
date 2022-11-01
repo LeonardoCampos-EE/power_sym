@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Tuple
 import jax.numpy as jnp
 import pdb
@@ -80,13 +81,13 @@ def merit_order_dispatch_algorithm(
     """
     Returns a tuple containing:
 
-    * Pg -> the optimal dispatch by merit order
+    * Pg_result -> the optimal dispatch by merit order
     * lambd -> the marginal cost considering the optimal dispatch
 
     """
 
-    # Calculate the number of generation units
-    num_units = len(Pg_max)
+    # Initialize the result
+    Pg_result = jnp.zeros_like(Pg_max)
 
     # Check if the generators are able to generate the demand
     if Pg_max.sum().item() < demand:
@@ -104,16 +105,9 @@ def merit_order_dispatch_algorithm(
     # Calculate the initial dispatch
     Pg = calculate_dispatched_power_from_cost(lambd, a, b)
 
-    # Initialize the result
-    Pg_result = jnp.zeros_like(Pg_max)
+    original_demand = copy(demand)
 
-    # Calculate the total generation
-    Pd = Pg.sum().item()
-
-    # Calculate the difference between generation and demand
-    delta_P = abs(Pd - demand)
-
-    while Pd != demand:
+    while Pg_result.sum().item() != original_demand:
 
         lower_violation = Pg - Pg_min
         lower_violation = jnp.where(lower_violation > 0.0, 0.0, lower_violation)
@@ -122,6 +116,13 @@ def merit_order_dispatch_algorithm(
         upper_violation = Pg - Pg_max
         upper_violation = jnp.where(upper_violation < 0.0, 0.0, upper_violation)
         upper_violation = jnp.abs(upper_violation)
+
+        if (
+            jnp.count_nonzero(lower_violation) == 0
+            and jnp.count_nonzero(upper_violation) == 0
+        ):
+            Pg_result = jnp.where(Pg_result == 0.0, Pg, Pg_result)
+            break
 
         # Check which generator violated the most
         index_max_lower_violation = jnp.argmax(lower_violation)
@@ -132,61 +133,28 @@ def merit_order_dispatch_algorithm(
 
         if max_lower_violation > max_upper_violation:
             # Fix the violation
-            Pg_result[index_max_lower_violation] = Pg_min[
-                index_max_lower_violation
-            ].copy()
+            fixed_dispatch = Pg_min[index_max_lower_violation].copy()
+            Pg_result = Pg_result.at[index_max_lower_violation].set(fixed_dispatch)
         else:
             # Fix the violation
-            Pg_result[index_max_upper_violation] = Pg_min[
-                index_max_upper_violation
-            ].copy()
+            fixed_dispatch = Pg_max[index_max_upper_violation].copy()
+            Pg_result = Pg_result.at[index_max_upper_violation].set(fixed_dispatch)
 
-    # Iterate through the generators to check if their dispatch is within
-    # the given limits, fix it otherwise
-    for idx in range(num_units):
+        demand = demand - fixed_dispatch
 
-        # Get the dispatch of the current generator
-        dispatch = (lambd - b[idx]) / a[idx]
-        Pg_current = Pg_current.at[idx].set(dispatch)
+        non_dispatched_generators = jnp.argwhere(Pg_result == 0.0)
 
-        # Check for a violation on the lower bound
-        if dispatch < Pg_min[idx]:
-            # Fix the dispatch
-            fixed_dispatch = Pg_min[idx]
-            Pg_current = Pg_current.at[idx].set(fixed_dispatch)
+        # Update the parameters
+        a_t = calculate_a_t(a[non_dispatched_generators])
+        b_t = calculate_b_t(
+            a[non_dispatched_generators], b[non_dispatched_generators], a_t
+        )
+        lambd = calculate_equivalent_incremental_cost(demand, a_t, b_t)
 
-            # Re-calculate the cost paramters
-            if idx < num_units - 1:
-                a_t = calculate_a_t(a[idx + 1 :])
-                b_t = calculate_b_t(a[idx + 1 :], b[idx + 1 :], a_t)
-            else:
-                a_t = calculate_a_t(a[idx])
-                b_t = calculate_b_t(a[idx], b[idx], a_t)
+        # Redispatch
+        Pg = calculate_dispatched_power_from_cost(lambd, a, b)
 
-            # Remove the current generator's power output from the demand
-            demand = demand - fixed_dispatch
+        # Fix the already dispatched generators
+        Pg = jnp.where(Pg_result != 0.0, Pg_result, Pg)
 
-            # Update the marginal cost
-            lambd = calculate_equivalent_incremental_cost(demand, a_t, b_t)
-
-        elif dispatch > Pg_max[idx]:
-
-            # Fix the dispatch
-            fixed_dispatch = Pg_max[idx]
-            Pg_current = Pg_current.at[idx].set(fixed_dispatch)
-
-            # Re-calculate the cost paramters
-            if idx < num_units - 1:
-                a_t = calculate_a_t(a[idx + 1 :])
-                b_t = calculate_b_t(a[idx + 1 :], b[idx + 1 :], a_t)
-            else:
-                a_t = calculate_a_t(a[idx])
-                b_t = calculate_b_t(a[idx], b[idx], a_t)
-
-            # Remove the current generator's power output from the demand
-            demand = demand - fixed_dispatch
-
-            # Update the marginal cost
-            lambd = calculate_equivalent_incremental_cost(demand, a_t, b_t)
-
-    return Pg_current, lambd
+    return Pg_result, lambd
