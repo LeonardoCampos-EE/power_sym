@@ -1,4 +1,4 @@
-from system import build_3_bus_system, PowerSystem
+from system import build_3_bus_system_Leo, PowerSystem
 
 import pdb
 
@@ -98,8 +98,11 @@ def build_ps():
 if __name__ == "__main__":
 
     # t = build_3_bus_system()
-    t = build_ps()
-    print(t.bus_info)
-    print(t.gen_info)
-    print(t.line_info)
-    print(t.load_info)
+    # t = build_ps()
+    # print(t.bus_info)
+    # print(t.gen_info)
+    # print(t.line_info)
+    # print(t.load_info)
+
+    t = build_3_bus_system_Leo()
+    pdb.set_trace()

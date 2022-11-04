@@ -26,9 +26,6 @@ class SystemArrays:
     hydro_q_g: jnp.DeviceArray
 
 
-
-
-
 def build_3_bus_system(
     base_voltage_kv: float = 110.0, base_power_mva: float = 100.0
 ) -> pp.pandapowerNet:
@@ -42,20 +39,12 @@ def build_3_bus_system(
 
     # Adicionar barra PV de Geração
     bus_1 = pp.create_bus(
-        system,
-        vn_kv=1.0 * base_voltage_kv,
-        name="K1 - PV",
-        index=0,
-        type="n"
+        system, vn_kv=1.0 * base_voltage_kv, name="K1 - PV", index=0, type="n"
     )
 
     # Adicionar barra Slack
     bus_2 = pp.create_bus(
-        system,
-        vn_kv=1.02 * base_voltage_kv,
-        name="K2 - Slack",
-        index=1,
-        type="n"
+        system, vn_kv=1.02 * base_voltage_kv, name="K2 - Slack", index=1, type="n"
     )
     # # Adicionar Grid externo - é modelado no PP como slack
     grid = pp.create_ext_grid(
@@ -68,11 +57,7 @@ def build_3_bus_system(
 
     # Adicionar barra PQ de carga
     bus_3 = pp.create_bus(
-        system,
-        vn_kv=1.035 * base_voltage_kv,
-        name="K3 - PQ",
-        index=2,
-        type="n"
+        system, vn_kv=1.035 * base_voltage_kv, name="K3 - PQ", index=2, type="n"
     )
 
     # Adicionar geradores termoelétricos
@@ -202,6 +187,136 @@ def build_3_bus_system(
     pp.create_load(system, bus_1, p_mw=1.80 * base_power_mva * 1.255)
     pp.create_load(system, bus_2, p_mw=2.65 * base_power_mva * 1.255)
     pp.create_load(system, bus_3, p_mw=1.08 * base_power_mva * 1.255)
+
+    # Executar o fluxo de potência para inicializar as variáveis do sistema
+    pp.runpp(
+        system,
+        algorithm="nr",
+        numba=True,
+        enforce_q_lims=True,
+        tolerance_mva=1e-6,
+    )
+
+    return system
+
+
+def build_3_bus_system_Leo(
+    base_voltage_kv: float = 110.0, base_power_mva: float = 100.0
+) -> pp.pandapowerNet:
+
+    # Inicializar a rede
+    system = pp.create_empty_network(name="Sistema 2 Geradores", sn_mva=base_power_mva)
+
+    # Determina a impedância de base do sistema
+    # Z = V²/100M
+    z_base = ((base_voltage_kv * 1000) ** 2) / (base_power_mva * 1e6)
+
+    # Adicionar barra PV de Geração
+
+    bus_1 = pp.create_bus(
+        system, vn_kv=1.05 * base_voltage_kv, name="1", index=0, type="n"
+    )
+    grid = pp.create_ext_grid(
+        system,
+        bus=bus_1,
+        vm_pu=1.05,
+        va_degree=0.0,
+        name="Slack",
+    )
+
+    # Adicionar barra Slack
+    bus_2 = pp.create_bus(
+        system, vn_kv=0.9547 * base_voltage_kv, name="K2 - Slack", index=1, type="n"
+    )
+    # # Adicionar Grid externo - é modelado no PP como slack
+
+    # Adicionar barra PQ de carga
+    bus_3 = pp.create_bus(
+        system, vn_kv=1.0 * base_voltage_kv, name="K3 - PQ", index=2, type="n"
+    )
+
+    # Adicionar geradores termoelétricos
+    pp.create_gen(
+        system,
+        bus=bus_1,
+        vm_pu=1.05,
+        p_mw=0.225 * base_power_mva,
+        name="G1 - Termo",
+        max_p_mw=1.0 * base_power_mva,
+        min_p_mw=0.0,
+    )
+    pp.create_gen(
+        system,
+        bus=bus_3,
+        vm_pu=1.0,
+        p_mw=0.3 * base_power_mva,
+        name="G2 - Termo",
+        max_p_mw=0.3 * base_power_mva,
+        min_p_mw=0.0,
+    )
+
+    """
+    O PandaPower aceita os elementos das linhas apenas em Ohms, então
+    é necessário converter os valores de PU para ohm
+
+    r_ohm = r_pu * z_base
+    x_ohm = x_pu * z_base
+    """
+    # Adicionar as linhas de transmissão
+    pp.create_line_from_parameters(
+        system,
+        from_bus=bus_1,
+        to_bus=bus_2,
+        length_km=1.0,
+        r_ohm_per_km=0.2 * z_base,
+        x_ohm_per_km=0.4 * z_base,
+        c_nf_per_km=11.0,
+        max_i_ka=0.96,
+        type="ol",
+    )
+    pp.create_line_from_parameters(
+        system,
+        from_bus=bus_1,
+        to_bus=bus_3,
+        length_km=1.0,
+        r_ohm_per_km=0.2 * z_base,
+        x_ohm_per_km=0.4 * z_base,
+        c_nf_per_km=11.0,
+        max_i_ka=0.96,
+        type="ol",
+    )
+    pp.create_line_from_parameters(
+        system,
+        from_bus=bus_2,
+        to_bus=bus_3,
+        length_km=1.0,
+        r_ohm_per_km=0.1 * z_base,
+        x_ohm_per_km=0.2 * z_base,
+        c_nf_per_km=11.0,
+        max_i_ka=0.96,
+        type="ol",
+    )
+
+    # Adicionar os shunts
+    pp.create_shunt(
+        system,
+        bus_1,
+        q_mvar=0.01 * 100,
+    )
+    pp.create_shunt(
+        system,
+        bus_2,
+        q_mvar=0.01 * 100,
+    )
+    pp.create_shunt(
+        system,
+        bus_3,
+        q_mvar=0.01 * 100,
+    )
+
+    # Adicionar as cargas
+    pp.create_load(system, bus_1, p_mw=0.0 * base_power_mva * 1.255, q_mvar=0.0)
+    pp.create_load(system, bus_2, p_mw=0.5 * base_power_mva * 1.255, q_mvar=0.2)
 
     # Executar o fluxo de potência para inicializar as variáveis do sistema
     pp.runpp(

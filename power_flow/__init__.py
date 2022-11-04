@@ -1,1 +1,1 @@
-from .objective import generator_cost_function
+from .functions import generator_cost_function
