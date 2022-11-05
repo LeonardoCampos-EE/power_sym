@@ -330,3 +330,21 @@ def active_power_losses(P: jnp.DeviceArray) -> jnp.DeviceArray:
     Ploss = jnp.triu(P) + jnp.tril(P).T
 
     return Ploss
+
+
+@jax.jit
+def active_power_balance(
+    P: jnp.DeviceArray, P_g: jnp.DeviceArray, P_c: jnp.DeviceArray
+) -> jnp.DeviceArray:
+
+    """
+    This function calculates the active power balance for each bus in the system.
+    The active power balance for the i-th bus is given by:
+
+    DeltaP_i = P_G_i - P_C_i - sum P[i, :]
+
+    """
+    P_km = jnp.expand_dims(jnp.sum(P, axis=1), axis=0).T
+    Delta_P = P_g - P_c - P_km
+
+    return Delta_P

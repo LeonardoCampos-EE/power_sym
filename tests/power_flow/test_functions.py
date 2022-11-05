@@ -10,6 +10,7 @@ from power_flow.functions import (
     backward_reactive_power_flow,
     reactive_power_flow,
     active_power_losses,
+    active_power_balance,
 )
 
 
@@ -157,4 +158,26 @@ def test_power_losses() -> None:
 
     np.testing.assert_allclose(Ploss, expected_Ploss, rtol=1e-1)
 
-    
+    return
+
+
+def test_active_power_balance() -> None:
+
+    P = jnp.array(
+        [
+            [0.0, 0.19801769, 0.02714109],
+            [-0.18659827, 0.0, -0.3135509],
+            [-0.02448714, 0.3246202, 0.0],
+        ]
+    )
+    P_g = jnp.array([[0.22515878], [0.0], [0.30013305]])
+    P_c = jnp.array([[0.0], [0.50014913], [0.0]])
+
+    expected_delta_P = np.array([[0.0], [0.0], [0.0]])
+
+    delta_P = active_power_balance(P, P_g, P_c)
+    delta_P = np.asarray(delta_P)
+
+    np.testing.assert_allclose(delta_P, expected_delta_P, rtol=1e-1)
+
+    return
