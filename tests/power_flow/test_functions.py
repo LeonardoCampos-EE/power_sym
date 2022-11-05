@@ -6,6 +6,10 @@ from power_flow.functions import (
     forward_active_power_flow,
     backward_active_power_flow,
     active_power_flow,
+    forward_reactive_power_flow,
+    backward_reactive_power_flow,
+    reactive_power_flow,
+    active_power_losses,
 )
 
 
@@ -38,6 +42,8 @@ def test_forward_active_power_flow() -> None:
 
     np.testing.assert_allclose(P_km, expected_P_km, rtol=1e-1)
 
+    return
+
 
 def test_backward_active_power_flow() -> None:
 
@@ -54,6 +60,8 @@ def test_backward_active_power_flow() -> None:
 
     np.testing.assert_allclose(P_mk, expected_P_mk, rtol=1e-1)
 
+    return
+
 
 def test_active_power_flow() -> None:
 
@@ -69,3 +77,84 @@ def test_active_power_flow() -> None:
     P = np.asarray(P)
 
     np.testing.assert_allclose(P, expected_P, rtol=1e-1)
+
+    return
+
+
+def test_forward_reactive_power_flow() -> None:
+
+    V = jnp.array([1.050, 0.9547, 1.0])
+    theta = jnp.array([0.0, -2.767, 0.694])
+    G = jnp.array([[0.0, 1.0, 1.0], [0.0, 0.0, 2.0], [0.0, 0.0, 0.0]])
+    B = jnp.array([[0.0, -2.0, -2.0], [0.0, 0.0, -4.0], [0.0, 0.0, 0.0]])
+    Bsh = jnp.array([[0.0, 0.01, 0.01], [0.0, 0.0, 0.01], [0.0, 0.0, 0.0]])
+
+    expected_Qkm = np.array(
+        [[0.0, 0.143, 0.1068], [0.0, 0.0, -0.0597], [0.0, 0.0, 0.0]]
+    )
+    Qkm = forward_reactive_power_flow(V, theta, G, B, Bsh)
+
+    Qkm = np.asarray(Qkm)
+
+    np.testing.assert_allclose(Qkm, expected_Qkm, rtol=1e-1)
+
+    return
+
+
+def test_backward_reactive_power_flow() -> None:
+
+    V = jnp.array([1.050, 0.9547, 1.0])
+    theta = jnp.array([0.0, -2.767, 0.694])
+    G = jnp.array([[0.0, 1.0, 1.0], [0.0, 0.0, 2.0], [0.0, 0.0, 0.0]])
+    B = jnp.array([[0.0, -2.0, -2.0], [0.0, 0.0, -4.0], [0.0, 0.0, 0.0]])
+    Bsh = jnp.array([[0.0, 0.01, 0.01], [0.0, 0.0, 0.01], [0.0, 0.0, 0.0]])
+
+    expected_Qmk = np.array(
+        [[0.0, 0.0, 0.0], [-0.1403, 0.0, 0.0], [-0.1226, 0.0627, 0.0]]
+    )
+    Qmk = backward_reactive_power_flow(V, theta, G, B, Bsh)
+
+    Qmk = np.asarray(Qmk)
+
+    np.testing.assert_allclose(Qmk, expected_Qmk, rtol=1e-1)
+
+    return
+
+
+def test_reactive_power_flow() -> None:
+
+    V = jnp.array([1.050, 0.9547, 1.0])
+    theta = jnp.array([0.0, -2.767, 0.694])
+    G = jnp.array([[0.0, 1.0, 1.0], [0.0, 0.0, 2.0], [0.0, 0.0, 0.0]])
+    B = jnp.array([[0.0, -2.0, -2.0], [0.0, 0.0, -4.0], [0.0, 0.0, 0.0]])
+    Bsh = jnp.array([[0.0, 0.01, 0.01], [0.0, 0.0, 0.01], [0.0, 0.0, 0.0]])
+
+    expected_Q = np.array(
+        [[0.0, 0.143, 0.1068], [-0.1403, 0.0, -0.0597], [-0.1226, 0.0627, 0.0]]
+    )
+    Q = reactive_power_flow(V, theta, G, B, Bsh)
+
+    Q = np.asarray(Q)
+
+    np.testing.assert_allclose(Q, expected_Q, rtol=1e-1)
+
+    return
+
+
+def test_power_losses() -> None:
+
+    V = jnp.array([1.050, 0.9547, 1.0])
+    theta = jnp.array([0.0, -2.767, 0.694])
+    G = jnp.array([[0.0, 1.0, 1.0], [0.0, 0.0, 2.0], [0.0, 0.0, 0.0]])
+    B = jnp.array([[0.0, -2.0, -2.0], [0.0, 0.0, -4.0], [0.0, 0.0, 0.0]])
+    expected_Ploss = np.array(
+        [[0.0, 0.0114, 0.0027], [0.0, 0.0, 0.0111], [0.0, 0.0, 0.0]]
+    )
+
+    P = active_power_flow(V, theta, G, B)
+    Ploss = active_power_losses(P)
+    Ploss = np.asarray(Ploss)
+
+    np.testing.assert_allclose(Ploss, expected_Ploss, rtol=1e-1)
+
+    

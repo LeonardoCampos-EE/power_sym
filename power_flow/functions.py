@@ -1,3 +1,4 @@
+from typing import Tuple
 import jax
 import jax.numpy as jnp
 import pdb
@@ -125,6 +126,7 @@ def backward_active_power_flow(
 
     return P_mk
 
+
 @jax.jit
 def active_power_flow(
     V: jnp.DeviceArray, theta: jnp.DeviceArray, G: jnp.DeviceArray, B: jnp.DeviceArray
@@ -153,3 +155,178 @@ def active_power_flow(
     P = forward_flow + backward_flow
 
     return P
+
+
+@jax.jit
+def forward_reactive_power_flow(
+    V: jnp.DeviceArray,
+    theta: jnp.DeviceArray,
+    G: jnp.DeviceArray,
+    B: jnp.DeviceArray,
+    Bsh: jnp.DeviceArray,
+) -> jnp.DeviceArray:
+
+    """
+    Computes the power flow from buses which start indexes are lower than
+    end indexes, i.e., the P_km flow.
+
+    Args:
+        - V -> Jax ROW vector of N entries (N is the number of buses) containing the
+        voltage magnitude of each bus
+        - theta -> Jax ROW vector of N entries (N is the number of buses) containing the
+        voltage angle of each bus (in degrees)
+        - G -> Jax matrix of NxN entries, containing the conductance of each transmission
+        line
+        - B -> Jax matrix of NxN entries, containing the susceptance of each transmission
+        line
+    Returns:
+        - Q_km -> Jax matrix which the element ij is the reactive power flow from bus i
+        to j
+
+    The forward flow equation is
+
+    Q_km = -(B+Bsh) V²_k + Bkm Vk Vm cos(theta_km) - Gkm Vk Vm sen(theta_km)
+
+    Where k is the starting bus and m is the ending bus connected by a transmission line,
+    theta_km = theta_k - theta_m
+
+    An expression like theta_k - theta_m can be efficiently computed as:
+    theta_km = theta - theta^T, by using Jax/Numpy broadcasting capabilities
+    """
+
+    # Auxiliary variables
+    Vk = jnp.expand_dims(V, axis=0).T
+    Vm = Vk.T
+
+    theta_k = jnp.deg2rad(jnp.expand_dims(theta, axis=0)).T
+    theta_m = theta_k.T
+
+    # Operations
+    theta_km = theta_k - theta_m
+    VkVm = jnp.multiply(Vk, Vm)
+
+    VkVm_cos_theta = jnp.multiply(VkVm, jnp.cos(theta_km))
+    VkVm_sin_theta = jnp.multiply(VkVm, jnp.sin(theta_km))
+
+    Q_km = (
+        jnp.multiply(-(B + Bsh), jnp.square(Vk))
+        + jnp.multiply(B, VkVm_cos_theta)
+        - jnp.multiply(G, VkVm_sin_theta)
+    )
+
+    return Q_km
+
+
+@jax.jit
+def backward_reactive_power_flow(
+    V: jnp.DeviceArray,
+    theta: jnp.DeviceArray,
+    G: jnp.DeviceArray,
+    B: jnp.DeviceArray,
+    Bsh: jnp.DeviceArray,
+) -> jnp.DeviceArray:
+
+    """
+    Computes the power flow from buses which start indexes are lower than
+    end indexes, i.e., the P_km flow.
+
+    Args:
+        - V -> Jax ROW vector of N entries (N is the number of buses) containing the
+        voltage magnitude of each bus
+        - theta -> Jax ROW vector of N entries (N is the number of buses) containing the
+        voltage angle of each bus (in degrees)
+        - G -> Jax matrix of NxN entries, containing the conductance of each transmission
+        line
+        - B -> Jax matrix of NxN entries, containing the susceptance of each transmission
+        line
+    Returns:
+        - Q_mk -> Jax matrix which the element ij is the reactive power flow from bus i
+        to j
+
+    The forward flow equation is
+
+    Q_mk = -(B+Bsh) V²_m + Bkm Vk Vm cos(theta_km) + Gkm Vk Vm sen(theta_km)
+
+    Where k is the starting bus and m is the ending bus connected by a transmission line,
+    theta_km = theta_k - theta_m
+
+    An expression like theta_k - theta_m can be efficiently computed as:
+    theta_km = theta - theta^T, by using Jax/Numpy broadcasting capabilities
+    """
+
+    # Auxiliary variables
+    Vk = jnp.expand_dims(V, axis=0).T
+    Vm = Vk.T
+
+    theta_k = jnp.deg2rad(jnp.expand_dims(theta, axis=0)).T
+    theta_m = theta_k.T
+
+    # Operations
+    theta_km = theta_k - theta_m
+    VkVm = jnp.multiply(Vk, Vm)
+
+    VkVm_cos_theta = jnp.multiply(VkVm, jnp.cos(theta_km))
+    VkVm_sin_theta = jnp.multiply(VkVm, jnp.sin(theta_km))
+
+    Q_mk = (
+        jnp.multiply(-(B + Bsh), jnp.square(Vm))
+        + jnp.multiply(B, VkVm_cos_theta)
+        + jnp.multiply(G, VkVm_sin_theta)
+    ).T
+
+    return Q_mk
+
+
+@jax.jit
+def reactive_power_flow(
+    V: jnp.DeviceArray,
+    theta: jnp.DeviceArray,
+    G: jnp.DeviceArray,
+    B: jnp.DeviceArray,
+    Bsh: jnp.DeviceArray,
+) -> jnp.DeviceArray:
+
+    """
+    Computes the reactive power flow between all buses
+
+    Args:
+        - V -> Jax vector of N entries (N is the number of buses) containing the
+        voltage magnitude of each bus
+        - theta -> Jax vector of N entries (N is the number of buses) containing the
+        voltage angle of each bus (in degrees)
+        - G -> Jax matrix of NxN entries, containing the conductance of each transmission
+        line
+        - B -> Jax matrix of NxN entries, containing the susceptance of each transmission
+        line
+
+    Returns
+        - Q -> Jax matrix which the element ij is the reactive power flow from bus i to j
+    """
+
+    forward_flow = forward_reactive_power_flow(V, theta, G, B, Bsh)
+    backward_flow = backward_reactive_power_flow(V, theta, G, B, Bsh)
+
+    Q = forward_flow + backward_flow
+
+    return Q
+
+
+@jax.jit
+def active_power_losses(P: jnp.DeviceArray) -> jnp.DeviceArray:
+
+    """
+    This function calculates the active power losses in the transmission lines
+
+    The loss on a line that connects buses i and j is given by:
+
+    Ploss = Pij + Pji or Qloss = Qij + Qji
+
+    args:
+        - P: the Jax matrix containing all the forward and backward active power flows
+    returns:
+        - Ploss: the Jax matrix containing all the active power losses in the lines
+    """
+
+    Ploss = jnp.triu(P) + jnp.tril(P).T
+
+    return Ploss
