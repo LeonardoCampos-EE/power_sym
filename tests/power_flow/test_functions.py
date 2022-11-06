@@ -181,3 +181,25 @@ def test_active_power_balance() -> None:
     np.testing.assert_allclose(delta_P, expected_delta_P, rtol=1e-1)
 
     return
+
+
+def test_reactive_power_balance() -> None:
+
+    Q = jnp.array(
+        [
+            [0.0, 0.14305021, 0.10684675],
+            [-0.14035083, 0.0, -0.05987231],
+            [-0.12256378, 0.06289641, 0.0],
+        ]
+    )
+    Q_g = jnp.array([[0.24989696], [0.0], [-0.05966737]])
+    Q_c = jnp.array([[0.0], [0.20022315], [0.0]])
+
+    expected_delta_Q = np.array([[0.0], [0.0], [0.0]])
+
+    delta_Q = active_power_balance(Q, Q_g, Q_c)
+    delta_Q = np.asarray(delta_Q)
+
+    np.testing.assert_allclose(delta_Q, expected_delta_Q, rtol=1e-1)
+
+    return

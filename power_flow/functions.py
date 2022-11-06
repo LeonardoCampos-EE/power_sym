@@ -348,3 +348,13 @@ def active_power_balance(
     Delta_P = P_g - P_c - P_km
 
     return Delta_P
+
+@jax.jit
+def reactive_power_balance(
+    Q: jnp.DeviceArray, Q_g: jnp.DeviceArray, Q_c: jnp.DeviceArray
+) -> jnp.DeviceArray:
+
+    Q_km = jnp.expand_dims(jnp.sum(Q, axis=1), axis=0).T
+    Delta_Q = Q_g - Q_c - Q_km
+
+    return Delta_Q
