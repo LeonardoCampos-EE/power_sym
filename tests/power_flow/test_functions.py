@@ -11,6 +11,7 @@ from power_flow.functions import (
     reactive_power_flow,
     active_power_losses,
     active_power_balance,
+    calculate_hydro_goal_deviation,
 )
 
 
@@ -201,5 +202,78 @@ def test_reactive_power_balance() -> None:
     delta_Q = np.asarray(delta_Q)
 
     np.testing.assert_allclose(delta_Q, expected_delta_Q, rtol=1e-1)
+
+    return
+
+
+def test_calculate_hydro_goal_deviation() -> None:
+
+    Pg = jnp.array(
+        [
+            [
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+                0.1,
+            ],
+            [
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+                0.2,
+            ],
+        ]
+    )
+    Pg = jnp.expand_dims(Pg, axis=1)
+
+    assert Pg.shape == (2, 1, 24)
+
+    goal = jnp.array([[2.4], [2.4]])
+    assert goal.shape == (2, 1)
+
+    expected_deviation = 2.4
+    deviation = calculate_hydro_goal_deviation(Pg, goal)
+
+    np.testing.assert_approx_equal(deviation, expected_deviation, significant=1)
 
     return
