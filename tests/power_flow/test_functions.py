@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+from jax import grad
 import numpy as np
 import pdb
 from power_flow.functions import (
@@ -13,7 +14,7 @@ from power_flow.functions import (
     active_power_balance,
     calculate_hydro_goal_deviation,
     objective_function,
-    restrictions_function
+    restrictions_function,
 )
 
 
@@ -277,5 +278,43 @@ def test_calculate_hydro_goal_deviation() -> None:
     deviation = calculate_hydro_goal_deviation(Pg, goal)
 
     np.testing.assert_approx_equal(deviation, expected_deviation, significant=1)
+
+    return
+
+
+def test_objective_function() -> None:
+
+    P_g = jnp.array([2.0, 2.0, 2.0] * 3).reshape((3, 1, 3))
+    a = jnp.array([2.0, 2.0, 2.0] * 3).reshape((3, 1, 3))
+    b = jnp.array([3.0, 3.0, 3.0] * 3).reshape((3, 1, 3))
+    c = jnp.array([1.0, 1.0, 1.0] * 3).reshape((3, 1, 3))
+
+    extra_variables = {"a": a, "b": b, "c": c}
+
+    exact_cost = 45.0 * 3
+
+    calculated_cost = objective_function(P_g, extra_variables)
+
+    np.testing.assert_approx_equal(exact_cost, calculated_cost)
+
+    return
+
+
+def test_objective_function_gradient() -> None:
+
+    P_g = jnp.array([2.0, 2.0, 2.0] * 3).reshape((3, 1, 3))
+    a = jnp.array([2.0, 2.0, 2.0] * 3).reshape((3, 1, 3))
+    b = jnp.array([3.0, 3.0, 3.0] * 3).reshape((3, 1, 3))
+    c = jnp.array([1.0, 1.0, 1.0] * 3).reshape((3, 1, 3))
+
+    extra_variables = {"a": a, "b": b, "c": c}
+
+    exact_gradient = 11.0 * 9.0
+
+    g = grad(objective_function, argnums=0)
+
+    calculated_gradient = g(P_g, extra_variables).sum().item()
+
+    np.testing.assert_approx_equal(exact_gradient, calculated_gradient)
 
     return
