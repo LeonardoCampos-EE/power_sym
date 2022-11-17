@@ -12,6 +12,8 @@ from power_flow.functions import (
     active_power_losses,
     active_power_balance,
     calculate_hydro_goal_deviation,
+    objective_function,
+    restrictions_function
 )
 
 

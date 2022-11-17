@@ -1,9 +1,11 @@
 import jax.numpy as jnp
-from jax import grad
+from jax import grad, jacfwd
+import jax
+jax.config.update('jax_platform_name', 'cpu')
 import numpy as np
 import pdb
 
-from methods import log_barrier, restrictions
+from methods import log_barrier, restrictions, newton_method
 
 X = jnp.array([[5.0], [6.0]])
 
@@ -45,3 +47,20 @@ def test_log_barrier() -> None:
     np.testing.assert_approx_equal(actual_barrier, expected_barrier, significant=1)
 
     return
+
+
+def test_newton_method() -> None:
+    @jax.jit
+    def f(x):
+        return jnp.asarray([x[0] ** 3 + x[1] - 1, -x[0] + x[1] ** 3 + 1])
+
+    x0 = jnp.asarray([2.0, 2.0])
+    J = jacfwd(f)
+
+    x = newton_method(x0, f, J)
+    x = np.asarray(x)
+
+    expected_x = np.array([1.0, 0.0])
+
+    np.testing.assert_allclose(x, expected_x, atol
+    =1e-3)

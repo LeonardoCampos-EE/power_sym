@@ -361,7 +361,7 @@ def reactive_power_balance(
     return Delta_Q
 
 
-#@jax.jit
+@jax.jit
 def calculate_hydro_goal_deviation(
     P_g: jnp.DeviceArray, goal: jnp.DeviceArray
 ) -> float:
@@ -386,6 +386,23 @@ def calculate_hydro_goal_deviation(
     P_g_sum = jnp.sum(P_g, axis=-1)
 
     deviation = jnp.abs(P_g_sum - goal)
-    deviation = jnp.sum(deviation).item()
+    deviation = jnp.sum(deviation).astype(float)
 
     return deviation
+
+
+def objective_function(Pg_thermal: jnp.DeviceArray, extra_variables: dict) -> float:
+
+    cost = generator_cost_function(
+        Pg_thermal,
+        a=extra_variables["a"],
+        b=extra_variables["b"],
+        c=extra_variables["c"],
+    )
+
+    return cost
+
+
+def restrictions_function(Pg_thermal: jnp.DeviceArray, extra_variables: dict) -> float:
+
+    return
