@@ -19,7 +19,7 @@ def test_fun() -> None:
 
 def test_restrictions() -> None:
 
-    expected_res = np.array([[21.0], [-5.993262053000914], [13.0], [5.0], [6.0]])
+    expected_res = np.array([[21.0], [-5.993262053000914], [13.0], [-5.0], [-6.0]])
     res = restrictions(X)
 
     res = np.asarray(res)

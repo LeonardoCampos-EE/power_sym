@@ -318,3 +318,40 @@ def test_objective_function_gradient() -> None:
     np.testing.assert_approx_equal(exact_gradient, calculated_gradient)
 
     return
+
+
+def test_restrictions_function() -> None:
+
+    V = jnp.array([1.050, 0.9547, 1.0])
+    theta = jnp.array([0.0, -2.767, 0.694])
+    G = jnp.array([[0.0, 1.0, 1.0], [0.0, 0.0, 2.0], [0.0, 0.0, 0.0]])
+    B = jnp.array([[0.0, -2.0, -2.0], [0.0, 0.0, -4.0], [0.0, 0.0, 0.0]])
+    Bsh = jnp.array([[0.0, 0.01, 0.01], [0.0, 0.0, 0.01], [0.0, 0.0, 0.0]])
+
+    P_g = jnp.array([[0.22515878], [0.0], [0.30013305]])
+    P_c = jnp.array([[0.0], [0.50014913], [0.0]])
+
+    Q_g = jnp.array([[0.24989696], [0.0], [-0.05966737]])
+    Q_c = jnp.array([[0.0], [0.20022315], [0.0]])
+
+    goal = jnp.array([0.22515878, 0.0, 0.30013305])
+
+    extra_variables = {
+        "V": V,
+        "theta": theta,
+        "G": G,
+        "B": B,
+        "Bsh": Bsh,
+        "Pc": P_c,
+        "Qg": Q_g,
+        "Qc": Q_c,
+        "goal": goal,
+    }
+    res = restrictions_function(P_g, extra_variables)
+
+    res = res.sum().item()
+    expected_res = 0.0
+
+    np.testing.assert_approx_equal(expected_res, res)
+
+    return

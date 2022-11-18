@@ -7,8 +7,12 @@ import pdb
 from functools import partial
 
 
-@partial(jax.jit, static_argnums=(1,))
-def log_barrier(x: jnp.DeviceArray, restrictions: Callable) -> float:
+# @partial(jax.jit, static_argnums=(1, 2))
+def log_barrier(
+    x: jnp.DeviceArray,
+    restrictions: Callable,
+    extra_variables: Union[dict, None] = None,
+) -> float:
 
     """
     This function calculates the logarithmic barrier for the
@@ -26,8 +30,8 @@ def log_barrier(x: jnp.DeviceArray, restrictions: Callable) -> float:
     returns:
         - barrier: a float value calculated using the expression above
     """
+    res = restrictions(x, extra_variables)
 
-    res = restrictions(x)
     barrier = jnp.log(-res)
     barrier = -jnp.sum(barrier)
     barrier = barrier.astype(float)
@@ -35,21 +39,34 @@ def log_barrier(x: jnp.DeviceArray, restrictions: Callable) -> float:
     return barrier
 
 
-@partial(jax.jit, static_argnums=(1, 2))
-def _newton_method_internal_op(xN: jnp.DeviceArray, f: Callable, J: Callable):
+def _newton_method_internal_op(
+    xN: jnp.DeviceArray,
+    J: Callable,
+    H: Callable,
+    t: float = 0.1,
+    extra_variables: Union[dict, None] = None,
+):
 
-    Jinv = inv(J(xN))
-    F = f(xN)
+    Hinv = inv(H(xN, t, extra_variables))
+    j = J(xN, t, extra_variables)
 
-    xN = xN - jnp.dot(Jinv, F)
+    xN1 = xN - jnp.dot(Hinv, j)
+    pdb.set_trace()
 
-    mismatch = jnp.linalg.norm(xN)
+    mismatch = jnp.linalg.norm(xN1 - xN)
 
-    return xN, mismatch
+    return xN1, mismatch
 
 
 def newton_method(
-    x0: jnp.DeviceArray, f: Callable, J: Callable, it_max: int = 100, eps: float = 1e-4
+    x0: jnp.DeviceArray,
+    f: Callable,
+    J: Callable,
+    H: Callable,
+    t: float = 0.1,
+    extra_variables: Union[dict, None] = None,
+    it_max: int = 100,
+    eps: float = 1e-4,
 ) -> jnp.DeviceArray:
 
     xN = None
@@ -66,7 +83,7 @@ def newton_method(
         if xN is None:
             xN = x0.copy()
 
-        xN, mismatch = _newton_method_internal_op(xN, f, J)
+        xN, mismatch = _newton_method_internal_op(xN, J, H, t, extra_variables)
 
         it += 1
 
@@ -109,10 +126,15 @@ def optimize(
     """
 
     # Create a function that calls both the objective and the restrictions
-    def F(x: jnp.DeviceArray, t: float, extra_variables: dict = None):
-        fun = objective(x, extra_variables) + t * restrictions(x, extra_variables)
+    def F(x: jnp.DeviceArray, t: float, extra_variables: dict = None) -> float:
+        fun = objective(x, extra_variables) + t * log_barrier(
+            x, restrictions, extra_variables
+        )
+        fun = fun.sum().astype(float)
         return fun
 
+    J = jax.jacfwd(F, argnums=0)
+    H = jax.hessian(F, argnums=0)
 
     x = x0.copy()
     x_list = [x]
@@ -130,9 +152,12 @@ def optimize(
         )
 
         # Newton method
+        x = newton_method(x, F, J, H, t, it_max, eps=1e-4)
 
         t = t + (t / (13 * jnp.sqrt(v)))
         duality_gap = num_restrictions / t
+
+        pdb.set_trace()
 
         duality_gap_list.append(duality_gap)
 
@@ -140,5 +165,7 @@ def optimize(
         f_list.append(objective(x))
         res_list.append(restrictions(x))
         it = it + 1
+
+    pdb.set_trace()
 
     return x, x_list, f_list, res_list, duality_gap_list
